@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="描紅練習">
+<meta name="theme-color" content="#fdf6ec">
+<title>中文描紅練習 · 口訣版</title>
+<style>
+  :root{
+    --ink:#2b2b2b;
+    --red:#e74c3c;
+    --paper:#fdf6ec;
+    --accent:#3b82f6;
+    --gold:#f5a623;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--paper); font-family:"PingFang TC","Noto Sans TC",sans-serif; color:#2b2b2b;}
+  body{display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:12px 12px 28px;}
+  header{width:100%; max-width:640px; text-align:center; margin-bottom:8px;}
+  header h1{font-size:22px; margin:4px 0 2px;}
+  header .sub{font-size:14px; color:#888;}
+  .catBar{display:flex; gap:8px; overflow-x:auto; padding:4px 2px; width:100%; max-width:640px; -webkit-overflow-scrolling:touch;}
+  .catBar::-webkit-scrollbar{display:none;}
+  .catChip{flex:0 0 auto; border:none; border-radius:20px; padding:8px 14px; font-size:15px; background:#fff; color:#555; border:1px solid #e5e5e5; box-shadow:none; cursor:pointer;}
+  .catChip.active{background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700;}
+  .charGrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(46px,1fr)); gap:7px; width:100%; max-width:640px; max-height:150px; overflow-y:auto; padding:8px; background:#fff; border-radius:12px; border:1px solid #eee; margin:8px 0 10px; -webkit-overflow-scrolling:touch;}
+  .charBtn{aspect-ratio:1/1; border:1px solid #eee; border-radius:10px; background:#fff; font-size:24px; color:#2b2b2b; font-family:"Kaiti TC","TW-Kai","STKaiti","KaiTi","DFKai-SB","Noto Serif TC",serif; padding:0; box-shadow:none; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  .charBtn.active{background:#ffe9e6; border:2px solid var(--red); color:var(--red); font-weight:700;}
+  .stage{position:relative; width:100%; max-width:640px; aspect-ratio:1/1; touch-action:none; user-select:none; -webkit-user-select:none;}
+  canvas{position:absolute; inset:0; width:100%; height:100%; border-radius:12px;}
+  #gridCanvas{z-index:1;}
+  #inkCanvas{z-index:2;}
+  .pinyin{font-size:15px; color:#b0483c; margin-top:6px; text-align:center;}
+
+  .strokeCard{width:100%; max-width:640px; background:#fff; border:1px solid #eee; border-radius:16px; padding:12px 14px; margin-top:12px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,.05);}
+  .strokeHead{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:4px;}
+  .strokeLabel{background:var(--accent); color:#fff; font-size:13px; font-weight:700; border-radius:999px; padding:3px 12px;}
+  .miniBtn{border:none; background:#eef2ff; color:#2b5bd6; border-radius:999px; padding:6px 12px; font-size:14px; cursor:pointer; font-family:inherit;}
+  .strokeTarget{width:min(300px,86%); margin:6px auto 0;}
+  .strokeTarget svg{width:100%; height:auto; display:block;}
+  .strokeControls{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px;}
+  .strokeCounter{font-size:13px; color:#888;}
+  .strokeLoading{font-size:14px; color:#999; padding:20px 0;}
+  .strokeErr{font-size:14px; color:#999; padding:20px 0;}
+
+  .mnemonicCard{width:100%; max-width:640px; background:#fff; border:1px solid #eee; border-radius:16px; padding:12px 14px; margin-top:12px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,.05);}
+  .mnemonicHead{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:6px;}
+  .mnemonicLabel{background:var(--gold); color:#fff; font-size:13px; font-weight:700; border-radius:999px; padding:3px 12px;}
+  .speakMini{border:none; background:#fff3e0; color:#b06a00; border-radius:999px; padding:6px 12px; font-size:14px; cursor:pointer; font-family:inherit;}
+  .mnemonic{font-size:16px; line-height:1.6; color:#333; min-height:24px;}
+  .imgWrap{width:min(300px,74%); margin:10px auto 0; border-radius:20px; overflow:hidden; box-shadow:0 6px 16px rgba(0,0,0,.1); background:#f7f7f7; border:1px solid #eee;}
+  .imgWrap img{width:100%; display:block; aspect-ratio:1/1; object-fit:cover; animation:float 3.2s ease-in-out infinite;}
+  .imgWrap.pop img{animation:pop .5s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes pop{0%{transform:scale(.72);opacity:.35}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:14px; width:100%; max-width:640px;}
+  button{border:none; border-radius:14px; padding:12px 18px; font-size:16px; font-family:inherit; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.08);}
+  .btn-primary{background:var(--accent); color:#fff; font-weight:700;}
+  .btn-gold{background:var(--gold); color:#fff; font-weight:700;}
+  .btn-red{background:var(--red); color:#fff;}
+  .btn-ghost{background:#fff; color:#444; border:1px solid #e5e5e5;}
+  .score{width:100%; max-width:640px; text-align:center; margin-top:12px; font-size:17px; min-height:24px; font-weight:600;}
+  .score.good{color:#16a34a;} .score.mid{color:#e67e22;} .score.low{color:var(--red);}
+  .sectionTitle{width:100%; max-width:640px; text-align:center; margin-top:26px; font-size:19px; font-weight:700; color:var(--ink);}
+  .sectionTitle .badge{background:#eef2ff; color:var(--accent); border-radius:999px; padding:4px 14px;}
+  .dictHint{width:100%; max-width:640px; text-align:center; font-size:14px; color:#888; margin-top:4px;}
+  #dictGridCanvas{z-index:1;}
+  #dictInkCanvas{z-index:2;}
+  .rewardBar{width:100%; max-width:640px; background:#fff; border:1px solid #eee; border-radius:16px; padding:10px 14px; margin-top:10px; box-shadow:0 2px 10px rgba(0,0,0,.05);}
+  .rewardBar .row{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .rewardBar .label{font-size:13px; color:#666; font-weight:700;}
+  .rewardBar .pts{font-size:14px; color:#2b2b2b;}
+  .rewardBar .pts strong{font-size:18px; color:var(--accent);}
+  .rewardTrack{height:10px; background:#f0ece5; border-radius:999px; overflow:hidden; margin-top:8px;}
+  .rewardFill{height:100%; background:linear-gradient(90deg,#f5a623,#e74c3c); width:0%; transition:width .3s;}
+  .rewardBar .draws{font-size:13px; color:#888;}
+  .cardOverlay{position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px;}
+  .cardPanel{background:#fff; border-radius:20px; padding:20px; max-width:340px; width:100%; text-align:center; position:relative; box-shadow:0 10px 40px rgba(0,0,0,.25);}
+  .cardClose{position:absolute; top:8px; right:12px; border:none; background:none; font-size:22px; color:#999; cursor:pointer; padding:0 4px; box-shadow:none;}
+  .cardTitle{font-size:20px; font-weight:800; margin:0 0 4px;}
+  .cardSub{font-size:13px; color:#888; margin:0 0 14px;}
+  .cardFace{width:180px; height:210px; margin:0 auto 14px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:#faf6ee; border:2px solid #eee;}
+  .cardFace.s5{background:#fff3d6; border-color:#f5a623;}
+  .cardFace.s4{background:#fdeef6; border-color:#e67ecf;}
+  .cardFace.s3{background:#eaf3ff; border-color:#6aa9f0;}
+  .cardFace.s2{background:#eefaf0; border-color:#6fce8a;}
+  .cardFace.s1{background:#f7f7f7; border-color:#ccc;}
+  .cardEmoji{font-size:72px; line-height:1;}
+  .cardName{font-size:17px; font-weight:700; color:#2b2b2b;}
+  .cardRarity{font-size:14px; color:#f5a623; letter-spacing:2px;}
+  .cardBackMark{font-size:80px; color:#c9bda6; font-weight:800; line-height:1;}
+  .cardActions{display:flex; gap:8px; justify-content:center;}
+  .footer{width:100%; max-width:640px; text-align:center; margin-top:14px; font-size:12px; color:#aaa;}
+</style>
+</head>
+<body>
+<header>
+  <h1>中文描紅練習 · 口訣版</h1>
+  <div class="sub" id="progress">初小常用正體字 · 口訣 + 粵拼 + 插圖</div>
+</header>
+
+<div class="rewardBar">
+  <div class="row">
+    <span class="label">今日得分</span>
+    <span class="pts"><strong id="rewardPoints">0</strong> / 200 分</span>
+  </div>
+  <div class="rewardTrack"><div class="rewardFill" id="rewardFill" style="width:0%"></div></div>
+  <div class="row" style="margin-top:8px;">
+    <span class="draws">可抽卡：<strong id="rewardDraws">0</strong> 次</span>
+    <button class="btn-primary" id="rewardDrawBtn" disabled>抽卡</button>
+  </div>
+</div>
+
+<div class="catBar" id="catBar"></div>
+<div class="charGrid" id="charGrid"></div>
+
+<div class="toolbar">
+  <button class="btn-ghost" id="prevBtn">上一個</button>
+  <button class="btn-ghost" id="nextBtn">下一個</button>
+</div>
+
+<div class="sectionTitle"><span class="badge">① 筆順（先看）</span></div>
+<div class="strokeCard" id="strokeCard">
+  <div class="strokeTarget" id="strokeTarget"></div>
+  <div class="strokeControls">
+    <button class="miniBtn" id="strokePlay">播放</button>
+    <button class="miniBtn" id="strokeReplay">重播</button>
+    <span class="strokeCounter" id="strokeCounter">已寫 0 / 0 筆</span>
+  </div>
+</div>
+
+<div class="sectionTitle"><span class="badge">② 口訣、讀音</span></div>
+<div class="mnemonicCard" id="mnemonicCard">
+  <div class="mnemonicHead">
+    <span class="mnemonicLabel">口訣</span>
+    <button class="speakMini" id="mnemonicMini">聽口訣</button>
+    <button class="speakMini" id="speakBtn">讀音</button>
+  </div>
+  <div class="pinyin" id="pinyin">粵拼：jat1</div>
+  <div class="mnemonic" id="mnemonic">人字一撇一捺，企直似人；軟腳蟹就唔似人。</div>
+  <div class="imgWrap" id="imgWrap">
+    <img id="charImg" alt="口訣插圖">
+  </div>
+</div>
+
+<div class="sectionTitle"><span class="badge">③ 跟字練寫</span></div>
+<div class="stage">
+  <canvas id="gridCanvas"></canvas>
+  <canvas id="inkCanvas"></canvas>
+</div>
+<div class="toolbar">
+  <button class="btn-red" id="clearBtn">清除</button>
+  <button class="btn-primary" id="checkBtn">檢查</button>
+</div>
+<div class="score" id="score"></div>
+
+<div class="sectionTitle"><span class="badge">④ 默書</span></div>
+<div class="dictHint">唔顯示範字，憑記憶寫返個字出嚟</div>
+<div class="stage">
+  <canvas id="dictGridCanvas"></canvas>
+  <canvas id="dictInkCanvas"></canvas>
+</div>
+<div class="toolbar">
+  <button class="btn-red" id="dictClearBtn">清除</button>
+  <button class="btn-primary" id="dictCheckBtn">檢查</button>
+</div>
+<div class="score" id="dictScore"></div>
+
+<div class="cardOverlay" id="cardOverlay" style="display:none">
+  <div class="cardPanel">
+    <button class="cardClose" id="cardClose" aria-label="關閉">✕</button>
+    <p class="cardTitle">抽卡遊戲</p>
+    <p class="cardSub" id="cardSub">可抽卡：0 次・已收藏 0 / 16 種</p>
+    <div class="cardFace" id="cardFace">
+      <span class="cardBackMark">?</span>
+    </div>
+    <div class="cardActions">
+      <button class="btn-primary" id="cardDrawBtn">抽一張卡</button>
+      <button class="btn-ghost" id="cardCloseBtn">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">粵語語音依賴裝置內建語音（iOS 對粵語支援有限）· 插圖由 AI 生成</div>
+
+<script>
+(function(){
+  const GROUPS = [{"name": "第一組：基礎字", "chars": [{"c": "人", "p": "jan4", "m": "人字一撇一捺，企直似人；軟腳蟹就唔似人。", "img": "https://sc02.alicdn.com/kf/A9dcbcb530d434e70b152c1a6420d42b8C.png"}, {"c": "口", "p": "hau2", "m": "口字四四方方，似口罩；食飯要除低，唔係食到成嘴漿。", "img": "https://sc02.alicdn.com/kf/Ada1aa7cd3d9344d3b5c4958a61a8a833L.png"}, {"c": "日", "p": "jat6", "m": "日字口加一橫，太陽曬到變叉燒。", "img": "https://sc02.alicdn.com/kf/Aa6f3fd3b3c3743269a804e3590b3e2ddU.png"}, {"c": "月", "p": "jyut6", "m": "月字彎彎似香蕉，月亮偷食唔抹嘴。", "img": "https://sc02.alicdn.com/kf/A5f86eba38e894063a38e58b73a6ae702A.png"}, {"c": "水", "p": "seoi2", "m": "水字中間豎鉤，左右水花濺到變落湯雞。", "img": "https://sc02.alicdn.com/kf/Ae590ae605bb24abc8088d54818a53b2bP.png"}, {"c": "火", "p": "fo2", "m": "火字兩點加個人，火苗一嬲燒焦屁股。", "img": "https://sc02.alicdn.com/kf/A47d22a2ebb0f4ac1a99cf0fdc8339ddaM.png"}, {"c": "木", "p": "muk6", "m": "木字一橫一豎撇捺，木頭人唔准郁。", "img": "https://sc02.alicdn.com/kf/A3f082875991743d4a3ae06ae7341917bD.png"}, {"c": "土", "p": "tou2", "m": "土字一橫一豎一橫，泥土鑽出蚯蚓話早晨。", "img": "https://sc02.alicdn.com/kf/A77c49d3f8f3241b6a4229f355df0ed5bi.png"}, {"c": "山", "p": "saan1", "m": "山字三豎一橫，爬山爬到腳軟變蟹。", "img": "https://sc02.alicdn.com/kf/A49d2a79e8ec54d8a87af264b3f9c4fe3U.png"}, {"c": "石", "p": "sek6", "m": "石字一橫撇口，石頭硬到跌親腳趾公。", "img": "https://sc02.alicdn.com/kf/A781aa3acdaf84a13b414863828db1a1dn.png"}, {"c": "田", "p": "tin4", "m": "田字四格方方，田裡青蛙跳跳紮。", "img": "https://sc02.alicdn.com/kf/A83d7df4b2fab4eee8537f4559d05cec4r.png"}, {"c": "目", "p": "muk6", "m": "目字口加兩橫，眼碌碌睇實你。", "img": "https://sc02.alicdn.com/kf/Aeeefd04bdc7844c3a45c484e369a1e24B.png"}, {"c": "手", "p": "sau2", "m": "手字似手掌，小手拍拍拍烏蠅。", "img": "https://sc02.alicdn.com/kf/Acee779ca4867401fa0c3206e9ed5b436e.png"}, {"c": "足", "p": "zuk1", "m": "足字口上腳，隻腳跑得快過狗。", "img": "https://sc02.alicdn.com/kf/Ac881e22d119e48cb99e3c2e2648d0553C.png"}, {"c": "女", "p": "neoi5", "m": "女字交叉坐，女仔靚到花都笑。", "img": "https://sc02.alicdn.com/kf/Ad1b2e93e227740ec979d9f39de6cb555v.png"}, {"c": "子", "p": "zi2", "m": "子字一橫鉤，細路笑到見牙唔見眼。", "img": "https://sc02.alicdn.com/kf/A723d3af317584805a51c49e5735578aef.png"}, {"c": "心", "p": "sam1", "m": "心字三點加彎鉤，愛心多到滿瀉。", "img": "https://sc02.alicdn.com/kf/Ac8f58665beca4129b9b6513483b7edd98.png"}, {"c": "力", "p": "lik6", "m": "力字一撇橫折鉤，用力搬石變大力水手。", "img": "https://sc02.alicdn.com/kf/A0f27f4cd7b4743d3af87b2662eb3d451D.png"}, {"c": "刀", "p": "dou1", "m": "刀字一撇橫折撇，切西瓜一刀兩斷。", "img": "https://sc02.alicdn.com/kf/Aa09f7827701a44ffac133713818941fe6.png"}, {"c": "大", "p": "daai6", "m": "大字一橫加人，大隻佬伸懶腰。", "img": "https://sc02.alicdn.com/kf/A7ced267bdc8346cab8f79139d6b12b43R.png"}, {"c": "小", "p": "siu2", "m": "小字中間豎鉤加兩點，小螞蟻搬象咁大力。", "img": "https://sc02.alicdn.com/kf/A6d7c25e62b86457f82f481f40c8a49cdq.png"}, {"c": "上", "p": "soeng6", "m": "上字一豎一短橫一長橫，向上望到頸酸。", "img": "https://sc02.alicdn.com/kf/A779eca4fb20e4a46bf300ad6cbe38acbW.png"}, {"c": "下", "p": "haa6", "m": "下字一橫一豎一點，向下望見螞蟻搬餅。", "img": "https://sc02.alicdn.com/kf/A173778337c184d0382697b0d89c39968g.png"}, {"c": "中", "p": "zung1", "m": "中字口加一豎，企中間唔怕左右郁。", "img": "https://sc02.alicdn.com/kf/A11e5ec5a075b4174bbb28e8c1f1aa3eeE.png"}, {"c": "天", "p": "tin1", "m": "天字兩橫加人，天跌落嚟當被冚。", "img": "https://sc02.alicdn.com/kf/A37f66dfa26264be386b41e7475e6df06m.png"}, {"c": "米", "p": "mai5", "m": "米字木加兩點，米飯香到貓跳牆。", "img": "https://sc02.alicdn.com/kf/A438f352175834d84ab381b404df12f332.png"}, {"c": "車", "p": "ce1", "m": "車字中間日，上下兩橫一豎穿，車輪轉到頭暈。", "img": "https://sc02.alicdn.com/kf/Af116e862a3a942a6862f12e6880b8644F.png"}, {"c": "馬", "p": "maa5", "m": "馬字四點底，隻馬跑到甩蹄。", "img": "https://sc02.alicdn.com/kf/A9a970aeedfa04d8cb985cfe116ea17cdU.png"}, {"c": "鳥", "p": "niu5", "m": "鳥字一點頭，小鳥飛上樹枝頭。", "img": "https://sc02.alicdn.com/kf/A4f53d63066b54efc8f6d0b0373a4a09bS.png"}, {"c": "貝", "p": "bui3", "m": "貝字目加八，貝殼靚到閃閃令。", "img": "https://sc02.alicdn.com/kf/A3fd6814ba6364f359d114fc7a34ec0f7F.png"}]}, {"name": "第二組：偏旁合體字", "chars": [{"c": "媽", "p": "maa1", "m": "媽字女旁馬，媽媽鬧人似打雷，但錫我錫到燶。", "img": "https://sc02.alicdn.com/kf/A3a9131014f994bbf81ea6610c2e5a929w.png"}, {"c": "姐", "p": "ze2", "m": "姐字女旁且，姐姐靚到蜜蜂都痴。", "img": "https://sc02.alicdn.com/kf/A66e99ea280194070bab8d971b0e98e4fm.png"}, {"c": "妹", "p": "mui6", "m": "妹字女旁未，妹妹喊起上嚟成個水塘。", "img": "https://sc02.alicdn.com/kf/A8d9108f0bd3a49bb8431c68e6296aaad0.png"}, {"c": "明", "p": "ming4", "m": "明字日加月，日月一齊亮，夜晚唔使開燈。", "img": "https://sc02.alicdn.com/kf/A2731b1095f4b432e878d55f49dea52c7C.png"}, {"c": "時", "p": "si4", "m": "時字日旁寺，時間走得快過追巴士。", "img": "https://sc02.alicdn.com/kf/A0367054e6c674bd1bf8dbf00b65ff8aer.png"}, {"c": "晴", "p": "cing4", "m": "晴字日旁青，晴天曬到變黑炭。", "img": "https://sc02.alicdn.com/kf/Acefafc6b05004db4ab0ca1060cfc7589N.png"}, {"c": "晚", "p": "maan5", "m": "晚字日旁免，晚上月亮出嚟巡邏。", "img": "https://sc02.alicdn.com/kf/A2af06627afa0491593fb6155499c7b43Y.png"}, {"c": "河", "p": "ho4", "m": "河字水旁可，河水清清魚仔游。", "img": "https://sc02.alicdn.com/kf/A441dbde569c6455182754e6a22e6c8a6C.png"}, {"c": "海", "p": "hoi2", "m": "海字水旁每，大海鹹到飲一啖即嘔。", "img": "https://sc02.alicdn.com/kf/A0ba60984de644e4cb14d0837a21a7214H.png"}, {"c": "清", "p": "cing1", "m": "清字水旁青，清水洗面滑溜溜。", "img": "https://sc02.alicdn.com/kf/A79a8fd5a2ee24c73b6edfdf0677ea118o.png"}, {"c": "洗", "p": "sai2", "m": "洗字水旁先，洗手先，唔好食到成手油。", "img": "https://sc02.alicdn.com/kf/A531d697ee0414548a6357f6699e8d89fq.png"}, {"c": "玩", "p": "waan2", "m": "玩字王旁元，玩到唔捨得做功課。", "img": "https://sc02.alicdn.com/kf/Aab60c213317e400f9c8b50e402881ca3e.png"}, {"c": "球", "p": "kau4", "m": "球字王旁求，個波圓到周圍碌。", "img": "https://sc02.alicdn.com/kf/Acecaa505a9374358b1eeeb661a11d10bk.png"}, {"c": "朋", "p": "pang4", "m": "朋字兩個月，兩個月亮做朋友，夜晚偷食。", "img": "https://sc02.alicdn.com/kf/A83d7c55d39724f7593ed655f1f17c28dR.png"}, {"c": "服", "p": "fuk6", "m": "服字月旁，衫褲著整齊，唔好反轉著。", "img": "https://sc02.alicdn.com/kf/Ae5e47e11c122495cb1c3901ebd67b8feN.png"}, {"c": "樹", "p": "syu6", "m": "樹字木旁，樹木高到遮太陽。", "img": "https://sc02.alicdn.com/kf/A069b632f4a814e5a8515b75ef1a116e0a.png"}, {"c": "林", "p": "lam4", "m": "林字雙木，雙木成林，雀仔開演唱會。", "img": "https://sc02.alicdn.com/kf/Aea8e10023fad4167a0915fe8daf19ad9X.png"}, {"c": "校", "p": "haau6", "m": "校字木旁交，學校多朋友，小息一齊追。", "img": "https://sc02.alicdn.com/kf/A0a7c87d2dba94efdb5d07669e3f754cfs.png"}, {"c": "板", "p": "baan2", "m": "板字木旁反，黑板寫字似跳舞。", "img": "https://sc02.alicdn.com/kf/A2afc5ddd72f3488b9d00dfa82deb4be3O.png"}, {"c": "他", "p": "taa1", "m": "他字人旁也，他人跌低要扶佢。", "img": "https://sc02.alicdn.com/kf/Aac62eb384f7e4702a5cef36437e01b91U.png"}, {"c": "你", "p": "nei5", "m": "你字人旁爾，你好你好，請你食粒糖。", "img": "https://sc02.alicdn.com/kf/Aeddc08056dd84348bee6c3a17fe300ded.png"}, {"c": "們", "p": "mun4", "m": "們字人旁門，我們一齊玩到癲。", "img": "https://sc02.alicdn.com/kf/A689b1d49024045f58027351c0eaa4df4s.png"}, {"c": "住", "p": "zyu6", "m": "住字人旁主，住屋企有飯食。", "img": "https://sc02.alicdn.com/kf/A7e00d4e9ddc2413d90a02c43965a41a53.png"}, {"c": "什", "p": "sam6", "m": "什字人旁十，乜嘢都問點解。", "img": "https://sc02.alicdn.com/kf/A5f76c4fa3ea047478a02b08155d6c88bd.png"}, {"c": "打", "p": "daa2", "m": "打字提手丁，打鼓咚咚聲。", "img": "https://sc02.alicdn.com/kf/A08004b8aff7846f698de1c4beb6712ecT.png"}, {"c": "找", "p": "zaau2", "m": "找字提手戈，找朋友一齊捉伊人。", "img": "https://sc02.alicdn.com/kf/Afa4e56799ffd4e88b6f15735c6470fc0A.png"}, {"c": "把", "p": "baa2", "m": "把字提手巴，把遮擋雨唔怕濕。", "img": "https://sc02.alicdn.com/kf/A5f0a84ec7679487cbe1f0ec11abae6f2a.png"}, {"c": "拉", "p": "laai1", "m": "拉字提手立，拉牛牛去食草。", "img": "https://sc02.alicdn.com/kf/A34a55b7b7ff74b16a5d99e48a99c9a3ch.png"}, {"c": "話", "p": "waa6", "m": "話字言旁舌，講話細聲唔好嘈。", "img": "https://sc02.alicdn.com/kf/A0d6e5082f92442cbbc7e2c9387d1192aJ.png"}, {"c": "說", "p": "syut3", "m": "說字言旁兌，說話有禮貌，人人讚。", "img": "https://sc02.alicdn.com/kf/A35a0ec25e9e7423985f436b003f6f8510.png"}, {"c": "請", "p": "cing2", "m": "請字言旁青，請人食飯講聲請。", "img": "https://sc02.alicdn.com/kf/A05b5027e2b1c4635b07a4b3b6a14f860G.png"}, {"c": "謝", "p": "ze6", "m": "謝字言旁射，謝謝你，請你食件餅。", "img": "https://sc02.alicdn.com/kf/Ad5601cbbf2684f3cbd17ec5309fe5166Y.png"}, {"c": "課", "p": "fo3", "m": "課字言旁果，上課聽書唔好發夢。", "img": "https://sc02.alicdn.com/kf/A03a64572923b4e2c91a3da15a9464082M.png"}, {"c": "吃", "p": "hek3", "m": "吃字口旁乞，食飯食到嘴嘟嘟。", "img": "https://sc02.alicdn.com/kf/Aa8a2279aaef8457b838336f4c44d1e35w.png"}, {"c": "叫", "p": "giu3", "m": "叫字口旁丩，叫媽媽我肚餓。", "img": "https://sc02.alicdn.com/kf/A56869488946b4d3fb58d93922359e7e10.png"}, {"c": "唱", "p": "coeng3", "m": "唱字口旁昌，唱歌走音都開心。", "img": "https://sc02.alicdn.com/kf/Aee1e324e55624e50964afb763dfa815ce.png"}, {"c": "聽", "p": "ting1", "m": "聽字耳仔聽，聽故事聽到耳仔郁。", "img": "https://sc02.alicdn.com/kf/A3b223627e32147b9a282bf21dd82f895L.png"}, {"c": "跑", "p": "paau2", "m": "跑字足旁包，跑步跑到氣喘。", "img": "https://sc02.alicdn.com/kf/A94b04f9f6ce249fcb230abc4e1a52e37X.png"}, {"c": "跳", "p": "tiu3", "m": "跳字足旁兆，跳跳紮似馬騮。", "img": "https://sc02.alicdn.com/kf/Ad51bfe5a4dea4540a4a97c3a26d2c893z.png"}, {"c": "路", "p": "lou6", "m": "路字足旁各，過路要睇燈。", "img": "https://sc02.alicdn.com/kf/A48af49dcef2b4f17b001930e7c59f5acs.png"}, {"c": "她", "p": "taa1", "m": "她字女旁也，她係女仔要尊重。", "img": "https://sc02.alicdn.com/kf/A5b8903ac8fe940b18b26fc60c6d107f13.png"}, {"c": "好", "p": "hou2", "m": "好字女加子，好仔好女唔亂喊。", "img": "https://sc02.alicdn.com/kf/A945e4ac18d1a424cb2dbc371b8a9f0d8y.png"}, {"c": "如", "p": "jyu4", "m": "如字女加口，如願以償食雪糕。", "img": "https://sc02.alicdn.com/kf/A4a8fec3dd8b443a18f017771bc87a4a81.png"}, {"c": "江", "p": "gong1", "m": "江字水旁工，江水長長魚仔游。", "img": "https://sc02.alicdn.com/kf/A6663dc1a57314bfdbbc2f6ab61bcd0a80.png"}, {"c": "池", "p": "ci4", "m": "池字水旁也，池水清到照到樣。", "img": "https://sc02.alicdn.com/kf/A98cad0c93b9c45f3ae2b8cc116af45c58.png"}, {"c": "沙", "p": "saa1", "m": "沙字水旁少，沙灘堆沙堆成山。", "img": "https://sc02.alicdn.com/kf/Acdb1f53e40144c9e85893210a28cae48H.png"}, {"c": "洋", "p": "joeng4", "m": "洋字水旁羊，洋面大到大船變玩具。", "img": "https://sc02.alicdn.com/kf/A0ae8a86373424d969f3d2c9bc23fc691z.png"}]}, {"name": "第三組：部首與部件", "chars": [{"c": "花", "p": "faa1", "m": "花字草頭化，花兒開到似笑臉。", "img": "https://sc02.alicdn.com/kf/A31cb6e36697e4d3181a44fc63486da31m.png"}, {"c": "草", "p": "cou2", "m": "草字草頭早，草青青牛流口水。", "img": "https://sc02.alicdn.com/kf/A193aa1b31445427db666d66594e762b64.png"}, {"c": "苗", "p": "miu4", "m": "苗字草頭田，苗兒伸懶腰話早晨。", "img": "https://sc02.alicdn.com/kf/Adb2a45a61570429bb33383909c080359E.png"}, {"c": "英", "p": "jing1", "m": "英字草頭央，英雄都怕痕癢。", "img": "https://sc02.alicdn.com/kf/A7689ed9c065b4ff399d170a04887b764k.png"}, {"c": "藥", "p": "joek6", "m": "藥字草頭樂，藥丸苦到舌頭打結。", "img": "https://sc02.alicdn.com/kf/A8eec2247a3c24be1b9e75dddf2feb0e0Y.png"}, {"c": "菜", "p": "coi3", "m": "菜字草頭采，食菜多到變白兔。", "img": "https://sc02.alicdn.com/kf/A0e12b9d3992c4a3ba24e31db8409b399j.png"}, {"c": "茶", "p": "caa4", "m": "茶字草頭人木，飲茶食包一盅兩件。", "img": "https://sc02.alicdn.com/kf/Ac8f1dfc3e28b426aa76a5f17b467ae7fz.png"}, {"c": "學", "p": "hok6", "m": "學字上面有隻手，學習學到變博士。", "img": "https://sc02.alicdn.com/kf/Aecc2c8fb64c1425e94f3453a09960a0bS.png"}, {"c": "字", "p": "zi6", "m": "字字寶蓋頭下子，寫字寫到似畫符。", "img": "https://sc02.alicdn.com/kf/A92350c5b57714d23b45eb37bc208d56cu.png"}, {"c": "家", "p": "gaa1", "m": "家字寶蓋頭下豕，家裡飯香豬都唔想走。", "img": "https://sc02.alicdn.com/kf/A2bba794887354f3c9030d374779a0c95j.png"}, {"c": "安", "p": "on1", "m": "安字寶蓋頭下女，安全第一唔好跳樓梯。", "img": "https://sc02.alicdn.com/kf/A14dc19648a72470397a6872293b8404eq.png"}, {"c": "定", "p": "ding6", "m": "定字寶蓋頭下疋，定定坐好唔好郁。", "img": "https://sc02.alicdn.com/kf/A59ee30fc43eb4194a0680e82a9350830W.png"}, {"c": "全", "p": "cyun4", "m": "全字人下王，全家食飯最開心。", "img": "https://sc02.alicdn.com/kf/Ae81d2fffbe8845399670bc18c6e220b2k.png"}, {"c": "會", "p": "wui5", "m": "會字人加云，我會唱歌又會跳舞。", "img": "https://sc02.alicdn.com/kf/A4298738af8c148fd959724f622c9752bz.png"}, {"c": "合", "p": "hap6", "m": "合字人一口，合作砌積木高過頭。", "img": "https://sc02.alicdn.com/kf/Ae877803a3f534382a21eebf08db6ebacn.png"}, {"c": "早", "p": "zou2", "m": "早字日下十，早起身唔好變懶豬。", "img": "https://sc02.alicdn.com/kf/A8cda15c7bce9411a928f4e29fcb285764.png"}, {"c": "是", "p": "si6", "m": "是字日下正，是就係唔好詐傻。", "img": "https://sc02.alicdn.com/kf/A91d4fa4d7405432dbe33afa5c3d960dav.png"}, {"c": "星", "p": "sing1", "m": "星字日加生，星星閃到似電燈。", "img": "https://sc02.alicdn.com/kf/Ac99e4e96a8fc4c16a67a7b716650a77fv.png"}, {"c": "春", "p": "ceon1", "m": "春字三人日，春天花開蝴蝶跳舞。", "img": "https://sc02.alicdn.com/kf/A8af9d9b8010342fab1dc7a09a0c524d1m.png"}, {"c": "夏", "p": "haa6", "m": "夏字日上折文，夏天熱到雪人融化。", "img": "https://sc02.alicdn.com/kf/A883be8fd182c4becb610a5becd0f9e2aZ.png"}, {"c": "秋", "p": "cau1", "m": "秋字禾加火，秋天落葉掃到成身汗。", "img": "https://sc02.alicdn.com/kf/Aa5897dd20e06417a936dda619b88d2976.png"}, {"c": "冬", "p": "dung1", "m": "冬字折文加兩點，冬天凍到鼻哥紅。", "img": "https://sc02.alicdn.com/kf/Aaab6367b562b43598843f386d275bba2q.png"}, {"c": "男", "p": "naam4", "m": "男字田加力，男仔都要學煮飯。", "img": "https://sc02.alicdn.com/kf/A4436b8983b1448a6b1063242f460eadfC.png"}, {"c": "界", "p": "gaai3", "m": "界字田加介，世界大廁所都要排隊。", "img": "https://sc02.alicdn.com/kf/Abd6697cd6aa744f3b60713fb3f146c2eZ.png"}, {"c": "思", "p": "si1", "m": "思字田加心，思考想到頭都大。", "img": "https://sc02.alicdn.com/kf/A672684fd3d9f4d7a96a4ad972b66b0b1J.png"}, {"c": "想", "p": "soeng2", "m": "想字相加心，想食糖就舉手。", "img": "https://sc02.alicdn.com/kf/Abce4724de212436084fca3a9940a10d0Q.png"}, {"c": "意", "p": "ji3", "m": "意字音加心，心意到禮物唔怕少。", "img": "https://sc02.alicdn.com/kf/A5e349de389ca424ab3007d004ee519e5j.png"}, {"c": "忘", "p": "mong4", "m": "忘字亡加心，忘記帶功課大件事。", "img": "https://sc02.alicdn.com/kf/A0febe6483eeb4e8d90edd48e8cf456f6o.png"}, {"c": "愛", "p": "oi3", "m": "愛字中間有顆心，愛心爆棚攬一下。", "img": "https://sc02.alicdn.com/kf/A19a9677e4803415e895f371c6d7e14e69.png"}, {"c": "筆", "p": "bat1", "m": "筆字竹加毛，筆桿直寫字唔好歪。", "img": "https://sc02.alicdn.com/kf/A2cb657302a784f82a658b528944ddf26Q.png"}, {"c": "笑", "p": "siu3", "m": "笑字竹加夭，笑一笑牙齒晒太陽。", "img": "https://sc02.alicdn.com/kf/A38464e9e513441d6bc67c0cc12c0c4e0E.png"}, {"c": "答", "p": "daap3", "m": "答字竹加合，答問題舉手先。", "img": "https://sc02.alicdn.com/kf/Aa858ee55dfeb4f1d9fc620d1b848978d3.png"}, {"c": "第", "p": "dai6", "m": "第字竹加弟，第一名唔好驕傲。", "img": "https://sc02.alicdn.com/kf/Af2a3d97ef0dd4c7e93faa8913a92581fY.png"}, {"c": "籃", "p": "laam4", "m": "籃字竹加監，籃球入樽全場嘩嘩聲。", "img": "https://sc02.alicdn.com/kf/Aa8719c030ae34574922d10453e1f9b9et.png"}, {"c": "童", "p": "tung4", "m": "童字立加里，童年快樂日日玩。", "img": "https://sc02.alicdn.com/kf/Ab2750cb9c23b42499712e9e1ca27856am.png"}, {"c": "音", "p": "jam1", "m": "音字立加日，聲音靚到雀仔聽。", "img": "https://sc02.alicdn.com/kf/Af9036334c5cb4411b6ce1019119ca5dcT.png"}, {"c": "親", "p": "can1", "m": "親字立木見，親人見面攬到實。", "img": "https://sc02.alicdn.com/kf/A0fb39b47e9ab46a49fd22765174ea372a.png"}, {"c": "香", "p": "hoeng1", "m": "香字禾加日，香噴噴飯煲跳掣。", "img": "https://sc02.alicdn.com/kf/A185933be5d814d65a8999a42709592e0o.png"}, {"c": "秀", "p": "sau3", "m": "秀字禾加乃，秀氣得嚟又聰明。", "img": "https://sc02.alicdn.com/kf/A5c2fed468da643c18646ba47421b79c1d.png"}, {"c": "季", "p": "gwai3", "m": "季字禾加子，四季輪流冬天食雪糕凍到震。", "img": "https://sc02.alicdn.com/kf/Aeb069874fc92401896fecb14018bad279.png"}]}, {"name": "第四組：包圍、走之、病字旁", "chars": [{"c": "回", "p": "wui4", "m": "回字大口套小口，返屋企食飯啦。", "img": "https://sc02.alicdn.com/kf/Ac9425db57edc4b44b8b18426327e9f26x.png"}, {"c": "國", "p": "gwok3", "m": "國字大口包或，國家大要愛佢。", "img": "https://sc02.alicdn.com/kf/Afba359b855cf414c99ab4ed6fde2f145n.png"}, {"c": "園", "p": "jyun4", "m": "園字大口包袁，公園盪鞦韆。", "img": "https://sc02.alicdn.com/kf/A09c95fe1486943eeb0d0cbb67e8b8f48f.png"}, {"c": "圓", "p": "jyun4", "m": "圓字大口包員，圓碌碌似個波。", "img": "https://sc02.alicdn.com/kf/A0e5cc3d59367441bbe3af660ffdb261cA.png"}, {"c": "圖", "p": "tou4", "m": "圖字大口包啚，圖書有公仔。", "img": "https://sc02.alicdn.com/kf/Ac9f3dd332e5e49638914294c3e6642adM.png"}, {"c": "因", "p": "jan1", "m": "因字大口包大，因為肚餓所以食。", "img": "https://sc02.alicdn.com/kf/Aa05ed059dc1e4201a4095eee45e26ef5W.png"}, {"c": "四", "p": "sei3", "m": "四字方框加兩腳，四人賽跑。", "img": "https://sc02.alicdn.com/kf/A831bf2205efb483ab42f9e07cb8dc4d8q.png"}, {"c": "問", "p": "man6", "m": "問字門裡有口，唔識就問到明。", "img": "https://sc02.alicdn.com/kf/Ad33392ec10f446c8ab54e1216e66b6f3j.png"}, {"c": "間", "p": "gaan1", "m": "間字門裡有日，房間有日光。", "img": "https://sc02.alicdn.com/kf/A6c19885b4808476a848b9b752ccb9615a.png"}, {"c": "開", "p": "hoi1", "m": "開字門裡開，開門畀媽媽。", "img": "https://sc02.alicdn.com/kf/A875d957916a24c118bc2c2549d8e1ec4W.png"}, {"c": "關", "p": "gwaan1", "m": "關字門裡關，關門唔好夾親手。", "img": "https://sc02.alicdn.com/kf/A827068d84675468baa4e39e346a2bae9N.png"}, {"c": "這", "p": "ze2", "m": "這字走之言，這邊有糖快啲嚟。", "img": "https://sc02.alicdn.com/kf/Af410a35960c946a5b36fd8c8c1b652eeF.png"}, {"c": "邊", "p": "bin1", "m": "邊字走之旁，邊度有得玩？", "img": "https://sc02.alicdn.com/kf/A5c6274a66aad45d58a0b200f37ac618b7.png"}, {"c": "過", "p": "gwo3", "m": "過字走之咼，過馬路睇燈先。", "img": "https://sc02.alicdn.com/kf/A655d7bb893d14d99b92cc38a2f1645fdl.png"}, {"c": "進", "p": "zeon3", "m": "進字走之隹，入屋要先敲門。", "img": "https://sc02.alicdn.com/kf/Ab237d2cf61d745aeae22010d6082b7833.png"}, {"c": "遠", "p": "jyun5", "m": "遠字走之袁，遠足帶多啲水。", "img": "https://sc02.alicdn.com/kf/A36c327814feb40bb99e44b608b357b94s.png"}, {"c": "送", "p": "sung3", "m": "送字走之关，送禮物人人笑。", "img": "https://sc02.alicdn.com/kf/Aff514f2288374b86882d966bb6e60a9bO.png"}, {"c": "迷", "p": "mai4", "m": "迷字走之米，迷路唔好喊問警察。", "img": "https://sc02.alicdn.com/kf/Ae7faae8f6d8c4c2bb7a070397a4d9f65p.png"}, {"c": "通", "p": "tung1", "m": "通字走之甬，通街走唔好衝。", "img": "https://sc02.alicdn.com/kf/A163927dada1949569fc13f21d80a86306.png"}, {"c": "病", "p": "beng6", "m": "病字病床丙，病咗要休息。", "img": "https://sc02.alicdn.com/kf/Ab155cba811f942d8a33843654e4e3c44y.png"}, {"c": "痛", "p": "tung3", "m": "痛字病床甬，痛痛飛走唔好喊。", "img": "https://sc02.alicdn.com/kf/A81cd91e9d7fd4b3999ec96c640ced482c.png"}, {"c": "疼", "p": "tang4", "m": "疼字病床冬，疼你疼到買糖。", "img": "https://sc02.alicdn.com/kf/A326c3d8bc92c439b80b4720304cfaec8Q.png"}, {"c": "房", "p": "fong2", "m": "房字戶加方，房裡有張床。", "img": "https://sc02.alicdn.com/kf/A4a5f7ceed7b449e4b1e9c478d80e2f77T.png"}, {"c": "屋", "p": "uk1", "m": "屋字尸加至，屋企最舒服。", "img": "https://sc02.alicdn.com/kf/Ae23dde4d35a24884bdc2f2daf52f1910x.png"}, {"c": "層", "p": "cang4", "m": "層字尸加曾，一層一層似蛋糕。", "img": "https://sc02.alicdn.com/kf/A73c1e874e63d493d92364f4e40be0361Z.png"}, {"c": "局", "p": "guk6", "m": "局字尸加口，郵局寄信。", "img": "https://sc02.alicdn.com/kf/Af794ee8744834111aaeb13b138b913f7n.png"}, {"c": "習", "p": "zaap6", "m": "習字白加羽，溫習唔好拖。", "img": "https://sc02.alicdn.com/kf/Aaad7d41ee1df46228d981b7e01608efbq.png"}, {"c": "羽", "p": "jyu5", "m": "羽字似羽毛，羽毛飛到半天高。", "img": "https://sc02.alicdn.com/kf/A67f0652adf7c4359838650af253c3ef6L.png"}]}, {"name": "第五組：青、包、方、木、水等家族", "chars": [{"c": "青", "p": "cing1", "m": "青字上邊三橫一豎，下邊個月，青BB青到發光。", "img": "https://sc02.alicdn.com/kf/Ab82a171b768c4975a0bdf038f7f08849M.png"}, {"c": "清", "p": "cing1", "m": "清字水旁青，清水洗面醒神晒。", "img": "https://sc02.alicdn.com/kf/A79a8fd5a2ee24c73b6edfdf0677ea118o.png"}, {"c": "晴", "p": "cing4", "m": "晴字日旁青，晴天出街玩。", "img": "https://sc02.alicdn.com/kf/Acefafc6b05004db4ab0ca1060cfc7589N.png"}, {"c": "情", "p": "cing4", "m": "情字心旁青，心情好食飯都香。", "img": "https://sc02.alicdn.com/kf/A1e05d5d87fa7400e83046f73782cfd91C.png"}, {"c": "請", "p": "cing2", "m": "請字言旁青，請你食朱古力。", "img": "https://sc02.alicdn.com/kf/A05b5027e2b1c4635b07a4b3b6a14f860G.png"}, {"c": "蜻", "p": "cing1", "m": "蜻字虫旁青，蜻蜓點水點到條尾濕。", "img": "https://sc02.alicdn.com/kf/Ad5fc136e28294a36b9add97b4cff2ddcb.png"}, {"c": "精", "p": "zing1", "m": "精字米旁青，精靈仔醒目過人。", "img": "https://sc02.alicdn.com/kf/Adfb1a83332824244b00d774a14cc6b2dP.png"}, {"c": "包", "p": "baau1", "m": "包字包住隻豬？包包有餡好味道。", "img": "https://sc02.alicdn.com/kf/A3bab489bd416442d831ba2c7362a67ea1.png"}, {"c": "抱", "p": "pou5", "m": "抱字提手包，抱抱媽媽充電。", "img": "https://sc02.alicdn.com/kf/A0984bcab8e7a492b931adaf85ebd5fde4.png"}, {"c": "跑", "p": "paau2", "m": "跑字足旁包，跑步快過隻狗。", "img": "https://sc02.alicdn.com/kf/A94b04f9f6ce249fcb230abc4e1a52e37X.png"}, {"c": "炮", "p": "paau3", "m": "炮字火旁包，炮仗噼啪唔好行近。", "img": "https://sc02.alicdn.com/kf/A0a082819ac7b4b70bd3ba2fa28fe6ade2.png"}, {"c": "泡", "p": "pou5", "m": "泡字水旁包，泡泡飛到鼻哥窿。", "img": "https://sc02.alicdn.com/kf/A80e89920332046d1b775ec88ac1a2c07W.png"}, {"c": "飽", "p": "baau2", "m": "飽字食旁包，食到飽肚腩凸。", "img": "https://sc02.alicdn.com/kf/Ad2410d86a2eb4aabaf443bb060548748M.png"}, {"c": "方", "p": "fong1", "m": "方字四角正，方包搽牛油。", "img": "https://sc02.alicdn.com/kf/A88bf5a6f26e74c9e80a3a38757196a147.png"}, {"c": "放", "p": "fong3", "m": "放字方旁攵，放學衝出去。", "img": "https://sc02.alicdn.com/kf/Accc6a7249352468b8f820efb546a77fdc.png"}, {"c": "房", "p": "fong2", "m": "房字戶加方，房有床瞓到唔想起身。", "img": "https://sc02.alicdn.com/kf/A4a5f7ceed7b449e4b1e9c478d80e2f77T.png"}, {"c": "訪", "p": "fong2", "m": "訪字言旁方，訪問朋友仔。", "img": "https://sc02.alicdn.com/kf/Af1b24d7699ab4e02bdd20edcfc956d6ei.png"}, {"c": "妨", "p": "fong4", "m": "妨字女旁方，妨礙人唔好制。", "img": "https://sc02.alicdn.com/kf/A0b73e7d61f0247eaa00ffc4e4da721deG.png"}, {"c": "仿", "p": "fong2", "m": "仿字人旁方，模仿猩猩揼心口。", "img": "https://sc02.alicdn.com/kf/A86d2b428f86d4930adbd8117cfffd863F.png"}, {"c": "木", "p": "muk6", "m": "木字一橫一豎撇捺，木頭人唔准笑。", "img": "https://sc02.alicdn.com/kf/A3f082875991743d4a3ae06ae7341917bD.png"}, {"c": "林", "p": "lam4", "m": "林字雙木，樹林多蚊咬到成腳。", "img": "https://sc02.alicdn.com/kf/Aea8e10023fad4167a0915fe8daf19ad9X.png"}, {"c": "森", "p": "sam1", "m": "森字三木，森林探險見到松鼠。", "img": "https://sc02.alicdn.com/kf/A390a5d1586624a9887794674dbc7c1f59.png"}, {"c": "樹", "p": "syu6", "m": "樹字木旁，樹上有隻樹懶。", "img": "https://sc02.alicdn.com/kf/A069b632f4a814e5a8515b75ef1a116e0a.png"}, {"c": "校", "p": "haau6", "m": "校字木旁交，學校小息最開心。", "img": "https://sc02.alicdn.com/kf/A0a7c87d2dba94efdb5d07669e3f754cfs.png"}, {"c": "板", "p": "baan2", "m": "板字木旁反，滑板踩到飛起。", "img": "https://sc02.alicdn.com/kf/A2afc5ddd72f3488b9d00dfa82deb4be3O.png"}, {"c": "椅", "p": "ji2", "m": "椅字木旁奇，椅子有腳唔會走。", "img": "https://sc02.alicdn.com/kf/Afb47826e25e543bebece1e42410b83baw.png"}, {"c": "江", "p": "gong1", "m": "江字水旁工，江邊釣魚釣到鞋。", "img": "https://sc02.alicdn.com/kf/A6663dc1a57314bfdbbc2f6ab61bcd0a80.png"}, {"c": "河", "p": "ho4", "m": "河字水旁可，河馬開口話肚餓。", "img": "https://sc02.alicdn.com/kf/A441dbde569c6455182754e6a22e6c8a6C.png"}, {"c": "湖", "p": "wu4", "m": "湖字水旁胡，湖邊天鵝跳舞。", "img": "https://sc02.alicdn.com/kf/A023e144a07bb4d2a9a03feda0b18e658x.png"}, {"c": "海", "p": "hoi2", "m": "海字水旁每，海灘堆沙變城堡。", "img": "https://sc02.alicdn.com/kf/A0ba60984de644e4cb14d0837a21a7214H.png"}, {"c": "洋", "p": "joeng4", "m": "洋字水旁羊，洋娃娃游水。", "img": "https://sc02.alicdn.com/kf/A0ae8a86373424d969f3d2c9bc23fc691z.png"}, {"c": "洗", "p": "sai2", "m": "洗字水旁先，洗手洗手細菌走。", "img": "https://sc02.alicdn.com/kf/A531d697ee0414548a6357f6699e8d89fq.png"}, {"c": "沙", "p": "saa1", "m": "沙字水旁少，沙粒入眼咪捽。", "img": "https://sc02.alicdn.com/kf/Acdb1f53e40144c9e85893210a28cae48H.png"}, {"c": "池", "p": "ci4", "m": "池字水旁也，池邊青蛙呱呱叫。", "img": "https://sc02.alicdn.com/kf/A98cad0c93b9c45f3ae2b8cc116af45c58.png"}, {"c": "玩", "p": "waan2", "m": "玩字王旁元，玩到唔記得返屋企。", "img": "https://sc02.alicdn.com/kf/Aab60c213317e400f9c8b50e402881ca3e.png"}, {"c": "球", "p": "kau4", "m": "球字王旁求，球證吹雞完場。", "img": "https://sc02.alicdn.com/kf/Acecaa505a9374358b1eeeb661a11d10bk.png"}, {"c": "媽", "p": "maa1", "m": "媽字女旁馬，媽媽跑得快過馬。", "img": "https://sc02.alicdn.com/kf/A3a9131014f994bbf81ea6610c2e5a929w.png"}, {"c": "姐", "p": "ze2", "m": "姐字女旁且，姐姐化妝變魔法。", "img": "https://sc02.alicdn.com/kf/A66e99ea280194070bab8d971b0e98e4fm.png"}, {"c": "妹", "p": "mui6", "m": "妹字女旁未，妹妹食飯食到成面飯。", "img": "https://sc02.alicdn.com/kf/A8d9108f0bd3a49bb8431c68e6296aaad0.png"}, {"c": "好", "p": "hou2", "m": "好字女加子，好嘢要分享。", "img": "https://sc02.alicdn.com/kf/A945e4ac18d1a424cb2dbc371b8a9f0d8y.png"}, {"c": "如", "p": "jyu4", "m": "如字女加口，如果肚餓就食包。", "img": "https://sc02.alicdn.com/kf/A4a8fec3dd8b443a18f017771bc87a4a81.png"}, {"c": "他", "p": "taa1", "m": "他字人旁也，他跌低扶一扶。", "img": "https://sc02.alicdn.com/kf/Aac62eb384f7e4702a5cef36437e01b91U.png"}, {"c": "你", "p": "nei5", "m": "你字人旁爾，你係我好朋友。", "img": "https://sc02.alicdn.com/kf/Aeddc08056dd84348bee6c3a17fe300ded.png"}, {"c": "們", "p": "mun4", "m": "們字人旁門，我們一齊大笑。", "img": "https://sc02.alicdn.com/kf/A689b1d49024045f58027351c0eaa4df4s.png"}, {"c": "住", "p": "zyu6", "m": "住字人旁主，住樓上跳跳紮會嘈。", "img": "https://sc02.alicdn.com/kf/A7e00d4e9ddc2413d90a02c43965a41a53.png"}, {"c": "打", "p": "daa2", "m": "打字提手丁，打乞嗤大聲到震。", "img": "https://sc02.alicdn.com/kf/A08004b8aff7846f698de1c4beb6712ecT.png"}, {"c": "找", "p": "zaau2", "m": "找字提手戈，找唔到鞋隻腳話喺度。", "img": "https://sc02.alicdn.com/kf/Afa4e56799ffd4e88b6f15735c6470fc0A.png"}, {"c": "把", "p": "baa2", "m": "把字提手巴，把風睇實有冇人。", "img": "https://sc02.alicdn.com/kf/A5f0a84ec7679487cbe1f0ec11abae6f2a.png"}, {"c": "拉", "p": "laai1", "m": "拉字提手立，拉筋拉到手長。", "img": "https://sc02.alicdn.com/kf/A34a55b7b7ff74b16a5d99e48a99c9a3ch.png"}, {"c": "話", "p": "waa6", "m": "話字言旁舌，講話唔好口水噴。", "img": "https://sc02.alicdn.com/kf/A0d6e5082f92442cbbc7e2c9387d1192aJ.png"}, {"c": "說", "p": "syut3", "m": "說字言旁兌，說話要算數。", "img": "https://sc02.alicdn.com/kf/A35a0ec25e9e7423985f436b003f6f8510.png"}, {"c": "請", "p": "cing2", "m": "請字言旁青，請請請請你坐。", "img": "https://sc02.alicdn.com/kf/A05b5027e2b1c4635b07a4b3b6a14f860G.png"}, {"c": "謝", "p": "ze6", "m": "謝字言旁射，謝謝送個飛吻。", "img": "https://sc02.alicdn.com/kf/Ad5601cbbf2684f3cbd17ec5309fe5166Y.png"}, {"c": "課", "p": "fo3", "m": "課字言旁果，上課唔好偷食糖。", "img": "https://sc02.alicdn.com/kf/A03a64572923b4e2c91a3da15a9464082M.png"}, {"c": "吃", "p": "hek3", "m": "吃字口旁乞，食飯唔好嗒嗒聲。", "img": "https://sc02.alicdn.com/kf/Aa8a2279aaef8457b838336f4c44d1e35w.png"}, {"c": "叫", "p": "giu3", "m": "叫字口旁丩，叫外賣唔該。", "img": "https://sc02.alicdn.com/kf/A56869488946b4d3fb58d93922359e7e10.png"}, {"c": "唱", "p": "coeng3", "m": "唱字口旁昌，唱K唱到聲沙。", "img": "https://sc02.alicdn.com/kf/Aee1e324e55624e50964afb763dfa815ce.png"}, {"c": "聽", "p": "ting1", "m": "聽字耳仔聽，聽媽咪話。", "img": "https://sc02.alicdn.com/kf/A3b223627e32147b9a282bf21dd82f895L.png"}, {"c": "跑", "p": "paau2", "m": "跑字足旁包，跑樓梯小心仆親。", "img": "https://sc02.alicdn.com/kf/A94b04f9f6ce249fcb230abc4e1a52e37X.png"}, {"c": "跳", "p": "tiu3", "m": "跳字足旁兆，跳彈床跳到飛天。", "img": "https://sc02.alicdn.com/kf/Ad51bfe5a4dea4540a4a97c3a26d2c893z.png"}, {"c": "路", "p": "lou6", "m": "路字足旁各，行路唔好睇手機。", "img": "https://sc02.alicdn.com/kf/A48af49dcef2b4f17b001930e7c59f5acs.png"}]}];
+
+  const SIZE = 720;
+  const FONT = 'bold 430px "Kaiti TC","TW-Kai","STKaiti","KaiTi","DFKai-SB","Noto Serif TC","PingFang TC",serif';
+  const PEN = '#2b2b2b';
+  const PEN_WIDTH = 22;
+  let catIdx = 0;
+  let charIdx = 0;
+  let templateMask = null;
+
+  const curList = () => GROUPS[catIdx].chars;
+  const curChar = () => curList()[charIdx];
+
+  const gridCanvas = document.getElementById('gridCanvas');
+  const inkCanvas = document.getElementById('inkCanvas');
+  gridCanvas.width = SIZE; gridCanvas.height = SIZE;
+  inkCanvas.width = SIZE; inkCanvas.height = SIZE;
+  const gctx = gridCanvas.getContext('2d');
+  const ictx = inkCanvas.getContext('2d');
+  const charImg = document.getElementById('charImg');
+  const imgWrap = document.getElementById('imgWrap');
+  const dictGridCanvas = document.getElementById('dictGridCanvas');
+  const dictInkCanvas = document.getElementById('dictInkCanvas');
+  dictGridCanvas.width = SIZE; dictGridCanvas.height = SIZE;
+  dictInkCanvas.width = SIZE; dictInkCanvas.height = SIZE;
+  const dgctx = dictGridCanvas.getContext('2d');
+  const dictIctx = dictInkCanvas.getContext('2d');
+
+  function drawGridOn(ctx){
+    ctx.clearRect(0,0,SIZE,SIZE);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,SIZE,SIZE);
+    const m = 46;
+    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 5;
+    ctx.strokeRect(m,m,SIZE-2*m,SIZE-2*m);
+    ctx.strokeStyle = 'rgba(231,76,60,0.42)'; ctx.lineWidth = 2;
+    ctx.setLineDash([10,9]);
+    ctx.beginPath();
+    ctx.moveTo(m,SIZE/2); ctx.lineTo(SIZE-m,SIZE/2);
+    ctx.moveTo(SIZE/2,m); ctx.lineTo(SIZE/2,SIZE-m);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawGrid(){ drawGridOn(gctx); }
+
+  function drawDictGrid(){ drawGridOn(dgctx); }
+
+  function drawTemplate(){
+    drawGrid();
+    gctx.font = FONT;
+    gctx.textAlign = 'center'; gctx.textBaseline = 'middle';
+    gctx.fillStyle = 'rgba(231,76,60,0.30)';
+    gctx.fillText(curChar().c, SIZE/2, SIZE/2 + SIZE*0.015);
+  }
+
+  function buildTemplateMask(){
+    const off = document.createElement('canvas');
+    off.width = SIZE; off.height = SIZE;
+    const c = off.getContext('2d');
+    c.font = FONT; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#000';
+    c.fillText(curChar().c, SIZE/2, SIZE/2 + SIZE*0.015);
+    const d = c.getImageData(0,0,SIZE,SIZE).data;
+    const mask = new Uint8Array(SIZE*SIZE);
+    for(let i=0;i<SIZE*SIZE;i++){ if(d[i*4+3]>40) mask[i]=1; }
+    return mask;
+  }
+
+  function renderChips(){
+    const bar = document.getElementById('catBar');
+    bar.innerHTML = '';
+    GROUPS.forEach(function(cat,i){
+      const b = document.createElement('button');
+      b.className = 'catChip' + (i===catIdx ? ' active' : '');
+      b.textContent = cat.name;
+      b.onclick = function(){ loadChar(i, 0); };
+      bar.appendChild(b);
+    });
+  }
+
+  function renderGrid(){
+    const grid = document.getElementById('charGrid');
+    grid.innerHTML = '';
+    curList().forEach(function(ch, ci){
+      const b = document.createElement('button');
+      b.className = 'charBtn' + (ci===charIdx ? ' active' : '');
+      b.textContent = ch.c;
+      b.onclick = function(){ loadChar(catIdx, ci); };
+      grid.appendChild(b);
+    });
+  }
+
+  let strokeDataPromise = null;
+  let strokeTimer = null;
+  let strokePlaying = false;
+  let strokeIndex = 0;
+  let strokeInfo = null;
+
+  function getStrokeData(){
+    if(!strokeDataPromise){
+      strokeDataPromise = fetch('data/strokeData.json').then(function(r){
+        if(!r.ok){ throw new Error('stroke data load failed'); }
+        return r.json();
+      });
+    }
+    return strokeDataPromise;
+  }
+
+  function setPlayBtn(label){
+    const btn = document.getElementById('strokePlay');
+    if(btn){ btn.textContent = label; }
+  }
+
+  function stopStrokeTimer(){
+    if(strokeTimer){ clearInterval(strokeTimer); strokeTimer = null; }
+    strokePlaying = false;
+    setPlayBtn('播放');
+  }
+
+  function updateStrokeFrame(){
+    if(!strokeInfo) return;
+    const total = strokeInfo.strokes.length;
+    const paths = document.querySelectorAll('#strokeTarget .s-path');
+    for(let i=0;i<paths.length;i++){
+      if(i < strokeIndex){
+        paths[i].setAttribute('visibility','visible');
+        paths[i].setAttribute('fill', (strokePlaying && i === strokeIndex-1) ? '#e74c3c' : '#2b2b2b');
+      }else{
+        paths[i].setAttribute('visibility','hidden');
+      }
+    }
+    const marker = document.querySelector('#strokeTarget .s-marker');
+    if(marker){
+      if(strokeIndex < total && strokeInfo.starts && strokeInfo.starts[strokeIndex]){
+        marker.setAttribute('visibility','visible');
+        marker.setAttribute('cx', strokeInfo.starts[strokeIndex][0]);
+        marker.setAttribute('cy', strokeInfo.starts[strokeIndex][1]);
+      }else{
+        marker.setAttribute('visibility','hidden');
+      }
+    }
+    const counter = document.getElementById('strokeCounter');
+    if(counter){ counter.textContent = '已寫 ' + Math.min(strokeIndex, total) + ' / ' + total + ' 筆'; }
+  }
+
+  function startStroke(){
+    if(!strokeInfo) return;
+    stopStrokeTimer();
+    strokeIndex = 0;
+    strokePlaying = true;
+    setPlayBtn('暫停');
+    updateStrokeFrame();
+    strokeTimer = setInterval(function(){
+      if(!strokeInfo){ stopStrokeTimer(); return; }
+      if(strokeIndex >= strokeInfo.strokes.length){
+        stopStrokeTimer();
+        return;
+      }
+      strokeIndex++;
+      updateStrokeFrame();
+    }, 1680);
+  }
+
+  function pauseStroke(){
+    stopStrokeTimer();
+    updateStrokeFrame();
+  }
+
+  function toggleStrokePlay(){
+    if(strokePlaying){ pauseStroke(); }
+    else { startStroke(); }
+  }
+
+  function renderStroke(ch){
+    stopStrokeTimer();
+    strokeInfo = null;
+    const target = document.getElementById('strokeTarget');
+    const counter = document.getElementById('strokeCounter');
+    target.innerHTML = '<div class="strokeLoading">筆順載入中…</div>';
+    if(counter){ counter.textContent = '已寫 0 / 0 筆'; }
+    getStrokeData().then(function(data){
+      const info = data[ch];
+      if(!info || !info.strokes || !info.strokes.length){
+        target.innerHTML = '<div class="strokeErr">此字暫無筆順資料</div>';
+        return;
+      }
+      strokeInfo = info;
+      let pathsHtml = '';
+      for(let i=0;i<info.strokes.length;i++){
+        pathsHtml += '<path class="s-path" d="' + info.strokes[i] + '" fill="#2b2b2b" visibility="hidden"></path>';
+      }
+      target.innerHTML =
+        '<svg viewBox="0 0 1024 1024" class="stroke-svg" role="img" aria-label="' + ch + '的筆順示範">' +
+          '<g class="s-grid" aria-hidden="true">' +
+            '<rect x="46" y="46" width="932" height="932" fill="#ffffff" stroke="#e74c3c" stroke-width="5"/>' +
+            '<line x1="46" y1="341.3" x2="978" y2="341.3" stroke="rgba(231,76,60,0.42)" stroke-width="2"/>' +
+            '<line x1="46" y1="682.7" x2="978" y2="682.7" stroke="rgba(231,76,60,0.42)" stroke-width="2"/>' +
+            '<line x1="341.3" y1="46" x2="341.3" y2="978" stroke="rgba(231,76,60,0.42)" stroke-width="2"/>' +
+            '<line x1="682.7" y1="46" x2="682.7" y2="978" stroke="rgba(231,76,60,0.42)" stroke-width="2"/>' +
+          '</g>' +
+          '<g class="s-flip" transform="translate(0,900) scale(1,-1)">' +
+            pathsHtml +
+            '<circle class="s-marker" r="16" fill="#e74c3c" visibility="hidden"></circle>' +
+          '</g>' +
+        '</svg>';
+      startStroke();
+    }).catch(function(){
+      target.innerHTML = '<div class="strokeErr">筆順資料載入失敗</div>';
+    });
+  }
+
+  function loadChar(cat, ci){
+    catIdx = (cat + GROUPS.length) % GROUPS.length;
+    const list = curList();
+    charIdx = (ci + list.length) % list.length;
+    const ch = curChar();
+    ictx.clearRect(0,0,SIZE,SIZE);
+    dictIctx.clearRect(0,0,SIZE,SIZE);
+    drawDictGrid();
+    templateMask = buildTemplateMask();
+    drawTemplate();
+    document.getElementById('progress').textContent = '「' + GROUPS[catIdx].name + '」第 ' + (charIdx+1) + ' / ' + list.length + ' 個字';
+    document.getElementById('pinyin').textContent = '粵拼：' + ch.p;
+    document.getElementById('mnemonic').textContent = ch.m;
+    charImg.onerror = function(){ this.style.display='none'; };
+    charImg.style.display = '';
+    charImg.src = ch.img || '';
+    renderStroke(ch);
+    const el = document.getElementById('score');
+    el.textContent = ''; el.className = 'score';
+    const dEl = document.getElementById('dictScore');
+    dEl.textContent = ''; dEl.className = 'score';
+    renderChips();
+    renderGrid();
+  }
+
+  function getPos(e){
+    const r = inkCanvas.getBoundingClientRect();
+    return { x:(e.clientX-r.left)*SIZE/r.width, y:(e.clientY-r.top)*SIZE/r.height };
+  }
+
+  let drawing = false, last = null;
+  inkCanvas.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    drawing = true; last = getPos(e);
+    ictx.fillStyle = PEN;
+    ictx.beginPath(); ictx.arc(last.x,last.y,PEN_WIDTH/2,0,Math.PI*2); ictx.fill();
+    if(inkCanvas.setPointerCapture) inkCanvas.setPointerCapture(e.pointerId);
+  });
+  inkCanvas.addEventListener('pointermove', function(e){
+    if(!drawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    ictx.strokeStyle = PEN; ictx.lineWidth = PEN_WIDTH;
+    ictx.lineCap = 'round'; ictx.lineJoin = 'round';
+    ictx.beginPath(); ictx.moveTo(last.x,last.y); ictx.lineTo(p.x,p.y); ictx.stroke();
+    last = p;
+  });
+  function stopDraw(){ drawing = false; last = null; }
+  inkCanvas.addEventListener('pointerup', stopDraw);
+  inkCanvas.addEventListener('pointercancel', stopDraw);
+
+  function getDictPos(e){
+    const r = dictInkCanvas.getBoundingClientRect();
+    return { x:(e.clientX-r.left)*SIZE/r.width, y:(e.clientY-r.top)*SIZE/r.height };
+  }
+  let dictDrawing = false, dictLast = null;
+  dictInkCanvas.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    dictDrawing = true; dictLast = getDictPos(e);
+    dictIctx.fillStyle = PEN;
+    dictIctx.beginPath(); dictIctx.arc(dictLast.x, dictLast.y, PEN_WIDTH/2, 0, Math.PI*2); dictIctx.fill();
+    if(dictInkCanvas.setPointerCapture) dictInkCanvas.setPointerCapture(e.pointerId);
+  });
+  dictInkCanvas.addEventListener('pointermove', function(e){
+    if(!dictDrawing) return;
+    e.preventDefault();
+    const p = getDictPos(e);
+    dictIctx.strokeStyle = PEN; dictIctx.lineWidth = PEN_WIDTH;
+    dictIctx.lineCap = 'round'; dictIctx.lineJoin = 'round';
+    dictIctx.beginPath(); dictIctx.moveTo(dictLast.x, dictLast.y); dictIctx.lineTo(p.x, p.y); dictIctx.stroke();
+    dictLast = p;
+  });
+  function stopDictDraw(){ dictDrawing = false; dictLast = null; }
+  dictInkCanvas.addEventListener('pointerup', stopDictDraw);
+  dictInkCanvas.addEventListener('pointercancel', stopDictDraw);
+
+  function dilate(mask, r){
+    const out = new Uint8Array(SIZE*SIZE);
+    for(let y=0;y<SIZE;y++){
+      const row = y*SIZE;
+      for(let x=0;x<SIZE;x++){
+        if(!mask[row+x]) continue;
+        const y0 = Math.max(0,y-r), y1 = Math.min(SIZE-1,y+r);
+        const x0 = Math.max(0,x-r), x1 = Math.min(SIZE-1,x+r);
+        for(let yy=y0;yy<=y1;yy++){
+          const orow = yy*SIZE;
+          for(let xx=x0;xx<=x1;xx++) out[orow+xx] = 1;
+        }
+      }
+    }
+    return out;
+  }
+
+  // ===== 獎勵系統：累積分數 + 抽卡 =====
+  const REWARD_KEY = 'hanzi_rewards_v1';
+  const DRAW_POINTS = 200;
+  const CARDS = [
+    {id:'fire-dragon', name:'火焰龍', emoji:'🐉', stars:5},
+    {id:'ice-unicorn', name:'冰晶獨角獸', emoji:'🦄', stars:4},
+    {id:'storm-wolf', name:'雷風狼', emoji:'🐺', stars:4},
+    {id:'forest-fox', name:'森林狐狸', emoji:'🦊', stars:3},
+    {id:'thunder-eagle', name:'雷電鷹', emoji:'🦅', stars:3},
+    {id:'ocean-turtle', name:'海洋龜', emoji:'🐢', stars:3},
+    {id:'lava-tiger', name:'岩漿虎', emoji:'🐯', stars:2},
+    {id:'moon-owl', name:'月光貓頭鷹', emoji:'🦉', stars:2},
+    {id:'sun-butterfly', name:'太陽蝴蝶', emoji:'🦋', stars:2},
+    {id:'wave-dolphin', name:'波浪海豚', emoji:'🐬', stars:2},
+    {id:'bamboo-panda', name:'竹林熊貓', emoji:'🐼', stars:1},
+    {id:'meadow-bee', name:'花田蜜蜂', emoji:'🐝', stars:1},
+    {id:'pond-frog', name:'池塘青蛙', emoji:'🐸', stars:1},
+    {id:'garden-rabbit', name:'花園兔子', emoji:'🐰', stars:1},
+    {id:'desert-snake', name:'沙漠蛇', emoji:'🐍', stars:1},
+    {id:'pearl-fish', name:'珍珠魚', emoji:'🐠', stars:1}
+  ];
+  const RARITY_WEIGHT = {1:40, 2:25, 3:15, 4:10, 5:5};
+
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  let reward = loadReward();
+  function loadReward(){
+    try{
+      const raw = localStorage.getItem(REWARD_KEY);
+      const t = raw ? JSON.parse(raw) : {};
+      const r = {
+        date: t.date || todayStr(),
+        points: Number(t.points) || 0,
+        draws: Number(t.draws) || 0,
+        collection: Array.isArray(t.collection) ? t.collection : [],
+        scoredChars: Array.isArray(t.scoredChars) ? t.scoredChars : []
+      };
+      if(r.date !== todayStr()){ r.date = todayStr(); r.points = 0; r.scoredChars = []; }
+      return r;
+    }catch(e){ return {date: todayStr(), points: 0, draws: 0, collection: [], scoredChars: []}; }
+  }
+
+  function saveReward(){
+    try{ localStorage.setItem(REWARD_KEY, JSON.stringify(reward)); }catch(e){}
+  }
+
+  function scoreChar(key, pts){
+    if(!key || reward.scoredChars.indexOf(key) >= 0) return false;
+    reward.scoredChars.push(key);
+    if(pts > 0){
+      reward.points += pts;
+      while(reward.points >= DRAW_POINTS){
+        reward.draws += 1;
+        reward.points -= DRAW_POINTS;
+      }
+    }
+    saveReward();
+    updateRewardBar();
+    return true;
+  }
+
+  function consumeDraw(){
+    if(reward.draws <= 0) return false;
+    reward.draws -= 1;
+    saveReward();
+    updateRewardBar();
+    return true;
+  }
+
+  function collectCard(id){
+    if(reward.collection.indexOf(id) < 0){
+      reward.collection.push(id);
+      saveReward();
+    }
+  }
+
+  function pickCard(){
+    const total = CARDS.reduce(function(s,c){ return s + (RARITY_WEIGHT[c.stars] || 10); }, 0);
+    let r = Math.random() * total;
+    for(let i=0;i<CARDS.length;i++){
+      r -= (RARITY_WEIGHT[CARDS[i].stars] || 10);
+      if(r <= 0) return CARDS[i];
+    }
+    return CARDS[0];
+  }
+
+  function starStr(n){ return '★'.repeat(n) + '☆'.repeat(5-n); }
+
+  function updateRewardBar(){
+    const ptsEl = document.getElementById('rewardPoints');
+    const fillEl = document.getElementById('rewardFill');
+    const drawsEl = document.getElementById('rewardDraws');
+    const btnEl = document.getElementById('rewardDrawBtn');
+    if(ptsEl){ ptsEl.textContent = reward.points; }
+    if(fillEl){ fillEl.style.width = Math.min(100, Math.round(reward.points / DRAW_POINTS * 100)) + '%'; }
+    if(drawsEl){ drawsEl.textContent = reward.draws; }
+    if(btnEl){ btnEl.disabled = reward.draws <= 0; }
+    const sub = document.getElementById('cardSub');
+    if(sub){ sub.textContent = '可抽卡：' + reward.draws + ' 次・已收藏 ' + reward.collection.length + ' / ' + CARDS.length + ' 種'; }
+  }
+
+  function openCardDialog(){
+    updateRewardBar();
+    document.getElementById('cardOverlay').style.display = 'flex';
+  }
+
+  function closeCardDialog(){
+    document.getElementById('cardOverlay').style.display = 'none';
+  }
+
+  function doDrawCard(){
+    if(!consumeDraw()) return;
+    const card = pickCard();
+    collectCard(card.id);
+    const face = document.getElementById('cardFace');
+    face.className = 'cardFace s' + card.stars;
+    face.innerHTML =
+      '<span class="cardEmoji">' + card.emoji + '</span>' +
+      '<span class="cardName">' + card.name + '</span>' +
+      '<span class="cardRarity">' + starStr(card.stars) + '</span>';
+    document.getElementById('cardDrawBtn').textContent = '再抽一次';
+    document.getElementById('cardDrawBtn').disabled = reward.draws <= 0;
+  }
+
+  function speakText(text, rate){
+    if(!('speechSynthesis' in window)){ alert('你的裝置不支援語音'); return; }
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-HK'; u.rate = (rate == null ? 0.85 : rate);
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }
+
+  function speak(){ speakText(curChar().c); }
+
+  function playImage(){
+    imgWrap.classList.remove('pop');
+    void imgWrap.offsetWidth;
+    imgWrap.classList.add('pop');
+    setTimeout(function(){ imgWrap.classList.remove('pop'); }, 600);
+  }
+
+  function speakMnemonic(){
+    speakText(curChar().m, 0.8);
+    playImage();
+  }
+
+  function speakPraise(){
+    speakText('波仔，叻仔，繼續努力！', 0.9);
+  }
+
+  function computeScore(ctx, mask){
+    const d = ctx.getImageData(0,0,SIZE,SIZE).data;
+    const ink = new Uint8Array(SIZE*SIZE);
+    let inkCount = 0;
+    for(let i=0;i<SIZE*SIZE;i++){ if(d[i*4+3]>40){ ink[i]=1; inkCount++; } }
+    if(!inkCount) return null;
+
+    const r = 14;
+    const inkNear = dilate(ink, r);
+    const tmpNear = dilate(mask, r);
+
+    let tCount = 0, covered = 0, inkOn = 0;
+    for(let i=0;i<SIZE*SIZE;i++){
+      if(mask[i]){ tCount++; if(inkNear[i]) covered++; }
+      if(ink[i] && tmpNear[i]) inkOn++;
+    }
+    const coverage = tCount ? covered/tCount : 0;
+    const precision = inkCount ? inkOn/inkCount : 0;
+    const score = Math.round((coverage*0.6 + precision*0.4)*100);
+    return {score: score, coverage: coverage, precision: precision};
+  }
+
+  function showScore(el, key, res, emptyMsg){
+    if(!res){ el.textContent = emptyMsg; el.className = 'score low'; return 0; }
+    const d10 = Math.round(res.score / 10);
+    let msg;
+    if(res.score>=90){ msg = '寫得好好！'; el.className = 'score good'; }
+    else if(res.score>=70){ msg = '不錯，繼續加油！'; el.className = 'score good'; }
+    else if(res.score>=50){ msg = '加油，再寫一次！'; el.className = 'score mid'; }
+    else { msg = '再試一次，慢慢寫！'; el.className = 'score low'; }
+    const awarded = scoreChar(key, d10);
+    let tail = '得分 ' + d10 + ' / 10（覆蓋 ' + Math.round(res.coverage*100) + '% · 準確 ' + Math.round(res.precision*100) + '%）';
+    if(!awarded){ tail += '・今日已計分'; }
+    el.textContent = msg + ' ' + tail;
+    return res.score;
+  }
+
+  function check(){
+    const res = computeScore(ictx, templateMask);
+    const s = showScore(document.getElementById('score'), 'w' + curChar().c, res, '還未寫字，先在格內描一描吧！');
+    if(s >= 70){ speakPraise(); }
+  }
+
+  function checkDict(){
+    const res = computeScore(dictIctx, templateMask);
+    const s = showScore(document.getElementById('dictScore'), 'd' + curChar().c, res, '還未默寫，先在格內寫字吧！');
+    if(s >= 70){ speakPraise(); }
+  }
+
+  document.getElementById('prevBtn').onclick = function(){ loadChar(catIdx, charIdx-1); };
+  document.getElementById('nextBtn').onclick = function(){ loadChar(catIdx, charIdx+1); };
+  document.getElementById('clearBtn').onclick = function(){
+    ictx.clearRect(0,0,SIZE,SIZE);
+    const el = document.getElementById('score');
+    el.textContent = ''; el.className = 'score';
+  };
+  document.getElementById('checkBtn').onclick = check;
+  document.getElementById('dictCheckBtn').onclick = checkDict;
+  document.getElementById('dictClearBtn').onclick = function(){
+    dictIctx.clearRect(0,0,SIZE,SIZE);
+    const el = document.getElementById('dictScore');
+    el.textContent = ''; el.className = 'score';
+  };
+  document.getElementById('speakBtn').onclick = speak;
+  document.getElementById('mnemonicMini').onclick = speakMnemonic;
+  document.getElementById('strokePlay').onclick = toggleStrokePlay;
+  document.getElementById('strokeReplay').onclick = startStroke;
+  imgWrap.addEventListener('click', speakMnemonic);
+  document.getElementById('rewardDrawBtn').onclick = openCardDialog;
+  document.getElementById('cardDrawBtn').onclick = doDrawCard;
+  document.getElementById('cardClose').onclick = closeCardDialog;
+  document.getElementById('cardCloseBtn').onclick = closeCardDialog;
+  updateRewardBar();
+
+  loadChar(0, 0);
+})();
+</script>
+</body>
+</html>
