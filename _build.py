@@ -42,8 +42,7 @@ HTML = """<!DOCTYPE html>
   header{width:100%; max-width:640px; text-align:center; margin-bottom:8px;}
   header h1{font-size:22px; margin:4px 0 2px;}
   header .sub{font-size:14px; color:#888;}
-  .catBar{display:flex; gap:8px; overflow-x:auto; padding:4px 2px; width:100%; max-width:640px; -webkit-overflow-scrolling:touch;}
-  .catBar::-webkit-scrollbar{display:none;}
+  .catBar{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; padding:4px 2px; width:100%; max-width:640px;}
   .catChip{flex:0 0 auto; border:none; border-radius:20px; padding:8px 14px; font-size:15px; background:#fff; color:#555; border:1px solid #e5e5e5; box-shadow:none; cursor:pointer;}
   .catChip.active{background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700;}
   .charGrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(46px,1fr)); gap:7px; width:100%; max-width:640px; max-height:150px; overflow-y:auto; padding:8px; background:#fff; border-radius:12px; border:1px solid #eee; margin:8px 0 10px; -webkit-overflow-scrolling:touch;}
