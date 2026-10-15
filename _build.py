@@ -427,6 +427,8 @@ HTML = """<!DOCTYPE html>
     const ch = curChar();
     ictx.clearRect(0,0,SIZE,SIZE);
     dictIctx.clearRect(0,0,SIZE,SIZE);
+    writeScored = false;
+    dictScored = false;
     drawDictGrid();
     templateMask = buildTemplateMask();
     drawTemplate();
@@ -436,7 +438,7 @@ HTML = """<!DOCTYPE html>
     charImg.onerror = function(){ this.style.display='none'; };
     charImg.style.display = '';
     charImg.src = ch.img || '';
-    renderStroke(ch);
+    renderStroke(ch.c);
     const el = document.getElementById('score');
     el.textContent = ''; el.className = 'score';
     const dEl = document.getElementById('dictScore');
@@ -514,7 +516,7 @@ HTML = """<!DOCTYPE html>
   }
 
   // ===== 獎勵系統：累積分數 + 抽卡 =====
-  const REWARD_KEY = 'hanzi_rewards_v1';
+  const REWARD_KEY = 'chinese_tracing_rewards_v1';
   const DRAW_POINTS = 200;
   const CARDS = [
     {id:'fire-dragon', name:'火焰龍', emoji:'🐉', stars:5},
@@ -550,21 +552,18 @@ HTML = """<!DOCTYPE html>
         date: t.date || todayStr(),
         points: Number(t.points) || 0,
         draws: Number(t.draws) || 0,
-        collection: Array.isArray(t.collection) ? t.collection : [],
-        scoredChars: Array.isArray(t.scoredChars) ? t.scoredChars : []
+        collection: Array.isArray(t.collection) ? t.collection : []
       };
-      if(r.date !== todayStr()){ r.date = todayStr(); r.points = 0; r.scoredChars = []; }
+      if(r.date !== todayStr()){ r.date = todayStr(); r.points = 0; }
       return r;
-    }catch(e){ return {date: todayStr(), points: 0, draws: 0, collection: [], scoredChars: []}; }
+    }catch(e){ return {date: todayStr(), points: 0, draws: 0, collection: []}; }
   }
 
   function saveReward(){
     try{ localStorage.setItem(REWARD_KEY, JSON.stringify(reward)); }catch(e){}
   }
 
-  function scoreChar(key, pts){
-    if(!key || reward.scoredChars.indexOf(key) >= 0) return false;
-    reward.scoredChars.push(key);
+  function addPoints(pts){
     if(pts > 0){
       reward.points += pts;
       while(reward.points >= DRAW_POINTS){
@@ -574,7 +573,6 @@ HTML = """<!DOCTYPE html>
     }
     saveReward();
     updateRewardBar();
-    return true;
   }
 
   function consumeDraw(){
@@ -687,37 +685,39 @@ HTML = """<!DOCTYPE html>
     return {score: score, coverage: coverage, precision: precision};
   }
 
-  function showScore(el, key, res, emptyMsg){
-    if(!res){ el.textContent = emptyMsg; el.className = 'score low'; return 0; }
+  let writeScored = false;
+  let dictScored = false;
+
+  function doCheck(ctx, el, emptyMsg, done){
+    const res = computeScore(ctx, templateMask);
+    if(!res){ el.textContent = emptyMsg; el.className = 'score low'; return done; }
     const d10 = Math.round(res.score / 10);
     let msg;
     if(res.score>=90){ msg = '寫得好好！'; el.className = 'score good'; }
     else if(res.score>=70){ msg = '不錯，繼續加油！'; el.className = 'score good'; }
     else if(res.score>=50){ msg = '加油，再寫一次！'; el.className = 'score mid'; }
     else { msg = '再試一次，慢慢寫！'; el.className = 'score low'; }
-    const awarded = scoreChar(key, d10);
     let tail = '得分 ' + d10 + ' / 10（覆蓋 ' + Math.round(res.coverage*100) + '% · 準確 ' + Math.round(res.precision*100) + '%）';
-    if(!awarded){ tail += '・今日已計分'; }
+    if(!done && d10 > 0){ addPoints(d10); done = true; }
+    else if(done){ tail += '・清除再寫可再加分'; }
     el.textContent = msg + ' ' + tail;
-    return res.score;
+    if(res.score >= 70){ speakPraise(); }
+    return done;
   }
 
   function check(){
-    const res = computeScore(ictx, templateMask);
-    const s = showScore(document.getElementById('score'), 'w' + curChar().c, res, '還未寫字，先在格內描一描吧！');
-    if(s >= 70){ speakPraise(); }
+    writeScored = doCheck(ictx, document.getElementById('score'), '還未寫字，先在格內描一描吧！', writeScored);
   }
 
   function checkDict(){
-    const res = computeScore(dictIctx, templateMask);
-    const s = showScore(document.getElementById('dictScore'), 'd' + curChar().c, res, '還未默寫，先在格內寫字吧！');
-    if(s >= 70){ speakPraise(); }
+    dictScored = doCheck(dictIctx, document.getElementById('dictScore'), '還未默寫，先在格內寫字吧！', dictScored);
   }
 
   document.getElementById('prevBtn').onclick = function(){ loadChar(catIdx, charIdx-1); };
   document.getElementById('nextBtn').onclick = function(){ loadChar(catIdx, charIdx+1); };
   document.getElementById('clearBtn').onclick = function(){
     ictx.clearRect(0,0,SIZE,SIZE);
+    writeScored = false;
     const el = document.getElementById('score');
     el.textContent = ''; el.className = 'score';
   };
@@ -725,6 +725,7 @@ HTML = """<!DOCTYPE html>
   document.getElementById('dictCheckBtn').onclick = checkDict;
   document.getElementById('dictClearBtn').onclick = function(){
     dictIctx.clearRect(0,0,SIZE,SIZE);
+    dictScored = false;
     const el = document.getElementById('dictScore');
     el.textContent = ''; el.className = 'score';
   };
